@@ -42,6 +42,7 @@ class Positionframe(ctk.CTkFrame):
         self.date_label.grid(row=row, column=6, sticky="nsew", padx=padx, pady=pady)
         asyncio.run(self.update_pos_frame())
 
+
     async def update_pos_frame(self):
         # test code 2 lines below
         r_random = random.randint(-10, 10)
