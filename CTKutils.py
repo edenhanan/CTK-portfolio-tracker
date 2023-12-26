@@ -7,16 +7,23 @@ import pandas
 import utils as ut
 
 
+def addtransaction(conection, entrydict: dict):
+    for key, i in entrydict.items():
+        print(i.get())
+
+
 class Positionframe(ctk.CTkFrame):
     milisecond = 1000
     swidth = 80
     update_time = 1 * milisecond  # 10 seconds
 
-    def __init__(
-            self, master,
-            positiondata: pandas.Series, row: int,
-            padx: int = 10, pady: int = 5,
-            border_width: int = 1):
+    def __init__(self,
+                 master,
+                 positiondata: pandas.Series,
+                 row: int,
+                 padx: int = 10,
+                 pady: int = 5,
+                 border_width: int = 1):
 
         super().__init__(master, border_width=border_width)
         self.ticker = positiondata.Ticker
@@ -26,7 +33,7 @@ class Positionframe(ctk.CTkFrame):
         self.position_cost = self.quantity * self.avg_price
 
         self.ticker_label = ctk.CTkLabel(self, text=self.ticker, width=self.swidth)
-        self.ticker_label.grid(row=row,  column=0, sticky="nsew", padx=padx, pady=pady)
+        self.ticker_label.grid(row=row, column=0, sticky="nsew", padx=padx, pady=pady)
         self.quantity_label = ctk.CTkLabel(self, text=self.quantity, width=self.swidth)
         self.quantity_label.grid(row=row, column=1, sticky="nsew", padx=padx, pady=pady)
         self.avg_price_label = ctk.CTkLabel(self, text=round(self.avg_price, 2), width=self.swidth)
@@ -41,7 +48,6 @@ class Positionframe(ctk.CTkFrame):
         self.date_label = ctk.CTkLabel(self, text="dd/mm/yyyy", width=self.swidth)
         self.date_label.grid(row=row, column=6, sticky="nsew", padx=padx, pady=pady)
         asyncio.run(self.update_pos_frame())
-
 
     async def update_pos_frame(self):
         # test code 2 lines below
@@ -61,8 +67,52 @@ class Positionframe(ctk.CTkFrame):
             self.pnl_label.configure(text_color="white")
             self.pnl_percentage_label.configure(text_color="white")
         self.update_idletasks()
-        self.after(self.update_time, lambda: threading.Thread(target=ut.startasyncloop, args=(self.update_pos_frame(),)).start())
+        self.after(self.update_time,
+                   lambda: threading.Thread(target=ut.startasyncloop, args=(self.update_pos_frame(),)).start())
 
 
+class Transactionframe(ctk.CTkFrame):
+    milisecond = 1000
+    swidth = 80
+    update_time = 1 * milisecond  # 10 seconds
 
+    def __init__(self,
+                 master,
+                 transactiondata: pandas.DataFrame,
+                 con,
+                 padx: int = 10,
+                 pady: int = 5,
+                 border_width: int = 1):
 
+        from main import tabs
+
+        transactions_info = tabs['Transactions']
+        super().__init__(master, border_width=border_width)
+        headers = list(transactiondata.columns)
+        tran_frame = ctk.CTkFrame(self)
+        tran_frame.grid(row=0, column=0, sticky="nsew")
+        addtrans_frame = ctk.CTkFrame(self)
+        addtrans_frame.grid(row=1, columnspan=len(headers), sticky="nsew")
+        for n, i in enumerate(headers):
+            transactions_info['transactions labels'].append(
+                ctk.CTkLabel(tran_frame, text=i, width=transactions_info['width']))
+            transactions_info['transactions labels'][n].grid(row=0, column=n, sticky="nsew", padx=10, pady=5)
+            if i != 'index':
+                transactions_info['add_transaction'][i] = ctk.CTkEntry(addtrans_frame, placeholder_text=i,
+                                                                                    width=transactions_info['width'])
+                transactions_info['add_transaction'][i].grid(row=0, column=n + 2, sticky="nsew", padx=10, pady=5)
+        for index, row in transactiondata.iterrows():
+            transactions_info['transactions frames'][row['Ticker']] = ctk.CTkFrame(tran_frame)
+            transactions_info['transactions frames'][row['Ticker']].grid(row=index + 1,
+                                                                            columnspan=len(list(transactiondata.columns)),
+                                                                            sticky="nsew")
+            for n, i in enumerate(row):
+                label = ctk.CTkLabel(transactions_info['transactions frames'][row['Ticker']], text=i,
+                                               width=transactions_info['width'])
+                label.grid(row=0, column=n, sticky="nsew", padx=10, pady=5)
+        addtans_button = ctk.CTkButton(addtrans_frame, width=20, text="Add",
+                                                 command=lambda: addtransaction(con, transactions_info[
+                                                     'add_transaction']))
+        addtans_button.grid(row=0, column=1, padx=5, pady=5)
+        load_button = ctk.CTkButton(addtrans_frame, width=20, text="Load", command=lambda: ut.open_file())
+        load_button.grid(row=0, column=0, padx=5, pady=5)

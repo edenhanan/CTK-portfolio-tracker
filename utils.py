@@ -5,17 +5,45 @@ import uuid
 import pandas as pd
 
 
-def addtransaction(filepath, connection):
-    cur = connection.cursor()
-    df = pd.read_csv(filepath)
-    df.to_sql('trades', connection, if_exists='append')
-    # cur.execute("CREATE TABLE IF NOT EXISTS stocks (symbol TEXT, price FLOAT, quantity INTEGER, date TEXT)")
-    # with open("trades.csv", "w") as f:
-    #     pass
-    connection.commit()
+# def addtransaction(filepath, connection):
+#     cur = connection.cursor()
+#     df = pd.read_csv(filepath)
+#     df.to_sql('trades', connection, if_exists='append')
+#     # cur.execute("CREATE TABLE IF NOT EXISTS stocks (symbol TEXT, price FLOAT, quantity INTEGER, date TEXT)")
+#     # with open("trades.csv", "w") as f:
+#     #     pass
+#     connection.commit()
 
 
-def calc_positions(connection):
+def positiondb(connection, mode='R'):
+    if mode not in ['R', 'W']:
+        print("mode must be 'R' or 'W'")
+        return
+    mode = mode.upper()
+
+    match mode:
+        case 'R':
+            df = pd.read_sql("SELECT * FROM positions", connection)
+            return df
+        case 'W':
+            from colorama import Fore
+            df = asyncio.run(calc_positions(connection))
+            df.to_sql('positions', connection, if_exists='replace')
+            print(Fore.GREEN + "positions table updated")
+
+
+def get_transaction(connection):
+    df = pd.read_sql("SELECT * FROM trades", connection)
+    return df
+
+
+def add_transaction(connection, ticker, price, quantity, date, action, type):
+    df = pd.read_sql("SELECT * FROM trades", connection)
+    df = df._append({'Ticker': ticker, 'Price': price, 'Quantity': quantity, 'Date': date, 'Action': action, 'Type': type})
+    df.to_sql('trades', connection, if_exists='replace')
+
+
+async def calc_positions(connection):
     long = 'LONG'
     short = 'SHORT'
     buy = 'BUY'
@@ -62,6 +90,11 @@ def get_unrealized_pnl(ticker, quantity, avg_price):
     current_price = ticker.basic_info['last_price']
     return round((current_price - avg_price) * quantity, 2)
 
+
+def open_file():
+    from tkinter.filedialog import askopenfilename
+    filename = askopenfilename()
+    return filename
 
 def startasyncloop(asyncfunc):
     asyncio.run(asyncfunc)
