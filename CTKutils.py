@@ -12,10 +12,21 @@ def addtransaction(conection, entrydict: dict):
         print(i.get())
 
 
+def open_toplevel(self):
+        self.toplevel_window = ToplevelWindow(self)  # create window if its None or destroyed
+
+class ToplevelWindow(ctk.CTkToplevel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.geometry("400x300")
+
+        self.label = ctk.CTkLabel(self, text="ToplevelWindow")
+        self.label.pack(padx=20, pady=20)
+
 class Positionframe(ctk.CTkFrame):
     milisecond = 1000
     swidth = 80
-    update_time = 1 * milisecond  # 10 seconds
+    update_time = 60 * milisecond  # 10 seconds
 
     def __init__(self,
                  master,
@@ -51,10 +62,10 @@ class Positionframe(ctk.CTkFrame):
 
     async def update_pos_frame(self):
         # test code 2 lines below
-        r_random = random.randint(-10, 10)
-        un_pnl = ut.get_unrealized_pnl(self.ticker, self.quantity, self.avg_price) * r_random
+        # r_random = random.randint(-10, 10)
+        # un_pnl = ut.get_unrealized_pnl(self.ticker, self.quantity, self.avg_price) * r_random
         # real code
-        # un_pnl = ut.get_unrealized_pnl(self.ticker, self.quantity, self.avg_price) # real code
+        un_pnl = ut.get_unrealized_pnl(self.ticker, self.quantity, self.avg_price) # real code
         self.pnl_percentage_label.configure(text=f'{round(un_pnl / self.position_cost * 100, 2)}%')
         self.pnl_label.configure(text=f'$ {round(un_pnl, 2)}')
         if un_pnl > 0:
@@ -80,6 +91,7 @@ class Transactionframe(ctk.CTkFrame):
                  master,
                  transactiondata: pandas.DataFrame,
                  con,
+                 load_file_path: str = None,
                  padx: int = 10,
                  pady: int = 5,
                  border_width: int = 1):
@@ -114,5 +126,5 @@ class Transactionframe(ctk.CTkFrame):
                                                  command=lambda: addtransaction(con, transactions_info[
                                                      'add_transaction']))
         addtans_button.grid(row=0, column=1, padx=5, pady=5)
-        load_button = ctk.CTkButton(addtrans_frame, width=20, text="Load", command=lambda: ut.open_file())
+        load_button = ctk.CTkButton(addtrans_frame, width=20, text="Load", command=lambda: ut.edit_and_open_file(load_file_path))
         load_button.grid(row=0, column=0, padx=5, pady=5)
