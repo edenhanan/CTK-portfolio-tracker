@@ -100,13 +100,15 @@ async def calc_positions(connection):
     return positions_df
 
 
-def get_unrealized_pnl(ticker, quantity, avg_price):
-    # todo: change this to call multipole tickers at once format:"aapl msft tsla"
-    if '_' in ticker:
-        return avg_price * quantity
-    ticker = yf.Ticker(ticker)
-    current_price = ticker.basic_info['last_price']
-    return round((current_price - avg_price) * quantity, 2)
+def get_current_prices(tickers):
+    if '_' in tickers:
+        raise ValueError("please remove the example trade from the trades table")
+    tickers_yfstring = ' '.join(tickers)
+    yfdata = yf.Tickers(tickers_yfstring)
+    yftickers = yfdata.tickers
+    return {key: value.basic_info.last_price for key, value in yftickers.items()}
+    # current_price = yftickers.basic_info['last_price']
+    # return round((current_price - avg_price) * quantity, 2)
 
 
 def create_example_trades():
