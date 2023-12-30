@@ -101,7 +101,7 @@ async def calc_positions(connection):
 
 
 def get_unrealized_pnl(ticker, quantity, avg_price):
-    # todo: change this to call moltipule tickers at once format:"aapl msft tsla"
+    # todo: change this to call multipole tickers at once format:"aapl msft tsla"
     if '_' in ticker:
         return avg_price * quantity
     ticker = yf.Ticker(ticker)
@@ -120,7 +120,7 @@ def create_example_trades():
         'Action': 'example("BUY"/"SELL")',
         'Type': 'example("LONG"/"SHORT")'
     }, ignore_index=True)
-    df.to_excel(tablename)
+    df.to_excel(tablename, index=False)
 
 
 def open_file_andwaitforsave(filepath):
