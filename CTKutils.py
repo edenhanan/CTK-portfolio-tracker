@@ -9,6 +9,7 @@ from pt_config import PtConfig as Tabs
 import time
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.dates import DateFormatter, DayLocator
 
 
 def addtransaction(
@@ -47,6 +48,7 @@ class Positionframe(ctk.CTkFrame):
                  border_width: int = 1):
 
         # self.pady = pady
+        self.ax = None
         global index
         super().__init__(master, border_width=border_width)
         self.padx = padx
@@ -127,26 +129,9 @@ class Positionframe(ctk.CTkFrame):
             date_labels[index].grid(row=0, column=ticker_column, sticky="nsew", padx=(self.padx + 10), pady=5)
             self.position_history[row.Ticker] = ut.get_and_save_ticker_history(row.Ticker, row.Start_Date,
                                                                                row.Average_Price, connection)
-
-        #     create a new frame under the ticker frame to show the pnl over time in a graph
-        # self.graph_frame = ctk.CTkFrame(self)
-        # self.graph_frame.grid(row=index + 2, columnspan=(len(headers) + 1), sticky="nsew")
-        #
-        # # Create a Figure for the graph
-        # self.fig = plt.Figure(figsize=(5, 5), dpi=100)
-        #
-        # # Create an Axes for the graph
-        # self.ax = self.fig.add_subplot(111)
-        #
-        # # Plot the PnL over time on the Axes
-        # self.ax.plot(self.pnl_labels)
-        #
-        # # Create a FigureCanvasTkAgg for the Figure
-        # self.canvas = FigureCanvasTkAgg(self.fig, master=self.graph_frame)
-        #
-        # # Display the FigureCanvasTkAgg on the graph frame
-        # self.canvas.get_tk_widget().pack(side="top", fill="both", expand=True)
-
+        history_frame = PositionHistoryFrame(self, self.position_history)
+        history_frame.grid(row=(self.position_frames.__len__() + 2), column=0, columnspan=(len(headers) + extra_column),
+                           sticky="nsew")
         asyncio.run(self.update_pos_frame())
 
     async def update_pos_frame(self):
@@ -178,6 +163,54 @@ class Positionframe(ctk.CTkFrame):
         print(f"update_pos_frame took {end - start} seconds")
         self.after(self.update_time,
                    lambda: threading.Thread(target=ut.startasyncloop, args=(self.update_pos_frame(),)).start())
+
+
+class PositionHistoryFrame(ctk.CTkFrame):
+    def __init__(self, master, position_history, **kwargs):
+        super().__init__(master, **kwargs)
+
+        if type(position_history) is not dict:
+            raise TypeError("position_history must be a dictionary")
+        else:
+            for key, df in position_history.items():
+                if type(df) is not pandas.DataFrame:
+                    raise TypeError(f"position_history['{key}'] must be a pandas.DataFrame")
+                elif df.empty:
+                    raise ValueError(f"position_history['{key}'] must not be empty")
+                elif 'Close' not in df.columns:
+                    raise ValueError(f"position_history['{key}'] must have a 'Close' column")
+        self.position_history = position_history
+
+        self.fig, self.ax = plt.subplots(figsize=(5, 4))
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self)
+        self.canvas.get_tk_widget().pack(side='top', fill='both', expand=True)
+
+        self.plot_position_history()
+
+    def plot_position_history(self):
+        self.ax.clear()
+        self.ax.grid(True)
+
+        for key, value in self.position_history.items():
+            self.ax.plot(self.position_history[key].index, value['Close'])
+        self.ax.legend(self.position_history.keys())
+        self.ax.set_title('Position History Close')
+        self.ax.set_xlabel('Date')
+        self.ax.set_ylabel('Close')
+
+        # Add a zero dotted red line
+        self.ax.axhline(0, color='red', linestyle='dotted')
+
+        # Format the x-axis to display dates nicely
+        self.ax.xaxis.set_major_locator(DayLocator(interval=7))  # set major ticks every 7 days
+        self.ax.xaxis.set_major_formatter(DateFormatter('%Y-%m-%d'))  # format dates as 'YYYY-MM-DD'
+        self.fig.autofmt_xdate()  # auto-format the x-axis labels to fit nicely
+
+        self.canvas.draw()
+
+    def update_plot(self, new_position_history):
+        self.position_history = new_position_history
+        self.plot_position_history()
 
 
 class Transactionframe(ctk.CTkFrame):

@@ -30,13 +30,16 @@ def get_and_save_ticker_history(ticker, start_date, avg_price, connection):
         # The ticker history exists in the database
         # Find the most recent date in the database for this ticker
         df = pd.read_sql(f"SELECT * FROM {ticker} ORDER BY Date", connection)
-        most_recent_date = df['Date'].iloc[-1].split(' ')[0]
+        most_recent_date = df['Date']
         df = df.set_index('Date')
+        # df.index = df.index.str.split(" ", expand=True)[0]
         ticker_history = yf.download(ticker, start=most_recent_date, end=datetime.today().strftime('%Y-%m-%d'), interval='1d')
+        ticker_history.index = pd.to_datetime(ticker_history.index)
+        ticker_history = ticker_history.set_index(ticker_history.index.strftime('%Y-%m-%d'))
         if ticker_history.empty:
             # No new data was downloaded
             return df
-        elif ticker_history.index[0].strftime('%Y-%m-%d') == most_recent_date:
+        elif ticker_history.index[0] == most_recent_date:
             # The most recent date in the database is the same as the first date in the new data
             # This means that the data is already up to date
             return df
@@ -45,6 +48,7 @@ def get_and_save_ticker_history(ticker, start_date, avg_price, connection):
         # The ticker history does not exist in the database
         # Download the ticker history from yfinance from the start date until today
         ticker_history = yf.download(ticker, start=start_date, end=datetime.today().strftime('%Y-%m-%d'), interval='1d')
+        ticker_history = ticker_history.set_index(ticker_history.index.strftime('%Y-%m-%d'))
         df_ticker_history = ticker_history
 
     # Subtract the average price from the closing price
